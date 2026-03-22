@@ -1,12 +1,19 @@
 ; 内核汇编代码
-; 编译: nasm -f bin kernel.asm -o kernel.bin
+; 编译: nasm -f elf32 kernel.asm -o kernel.o
 
 bits 32
 
 section .text
 
-; 内核入口点
+; 导出符号
 global _start
+extern memory_init
+extern malloc
+extern free
+
+extern memory_status
+
+; 内核入口点
 _start:
     ; 调用内核主函数
     call kernel_main
@@ -124,6 +131,26 @@ kernel_main:
     call print_string
     popad
     
+    ; 初始化内存管理
+    pushad
+    mov eax, 0x1000000  ; 假设16MB内存
+    call memory_init
+    popad
+    
+    ; 测试内存分配
+    pushad
+    mov eax, 1024        ; 分配1KB内存
+    call malloc
+    mov [test_ptr], eax  ; 保存分配的内存指针
+    
+    ; 打印内存分配信息
+    mov esi, msg_mem_alloc
+    mov bx, 10
+    mov cx, 16
+    mov dl, 0x0f
+    call print_string
+    popad
+    
     ; 无限循环
     jmp $  ; 无限循环
 
@@ -131,3 +158,6 @@ section .data
 msg_welcome db 'Welcome to PicoKernel!', 0
 msg_info1   db 'This is a simple operating system kernel.', 0
 msg_info2   db 'Kernel is running in 32-bit protected mode.', 0
+msg_mem_alloc db 'Memory allocation test completed.', 0
+
+test_ptr dd 0  ; 测试内存指针
