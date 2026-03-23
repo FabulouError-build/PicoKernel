@@ -50,19 +50,11 @@ if [ $? -ne 0 ]; then
 fi
 echo "Kernel compiled successfully."
 
-# 链接内核
+# 链接内核并生成二进制文件
 echo "Linking kernel..."
-gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o -o build/kernel.elf
+gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o -o build/kernel.bin
 if [ $? -ne 0 ]; then
     echo "Error: Failed to link kernel."
-    exit 1
-fi
-
-# 转换为二进制格式
-echo "Converting to binary format..."
-objcopy -O binary build/kernel.elf build/kernel.bin
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to convert kernel to binary format."
     exit 1
 fi
 echo "Kernel linked successfully."

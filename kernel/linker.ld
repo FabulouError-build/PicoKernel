@@ -22,5 +22,7 @@ SECTIONS {
         *(.comment)
         *(.eh_frame)
         *(.reloc)
+        *(.note*)
+        *(.debug*)
     }
 }
