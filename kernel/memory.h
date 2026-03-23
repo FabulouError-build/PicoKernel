@@ -4,12 +4,13 @@
 #define MEMORY_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 // 内存页大小
 #define PAGE_SIZE 4096
 
 // 物理内存块结构
-typedef struct {
+typedef struct memory_block {
     uint32_t size;      // 块大小
     uint32_t address;   // 物理地址
     uint8_t free;       // 是否空闲

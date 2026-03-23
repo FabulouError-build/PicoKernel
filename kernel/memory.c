@@ -33,7 +33,7 @@ void *malloc(uint32_t size) {
                 // 创建新块
                 memory_block_t *new_block = (memory_block_t *)(current->address + size);
                 new_block->size = current->size - size - sizeof(memory_block_t);
-                new_block->address = new_block + 1;
+                new_block->address = (uint32_t)(new_block + 1);
                 new_block->free = 1;
                 new_block->next = current->next;
                 
