@@ -101,7 +101,6 @@ void *sys_malloc(int size) {
 // 释放内存
 void sys_free(void *ptr) {
     free(ptr);
-    return 0;
 }
 
 // 获取进程ID

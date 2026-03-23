@@ -7,17 +7,23 @@ section .text
 
 ; 导出符号
 global _start
-extern memory_init
-extern malloc
-extern free
-extern memory_status
+extern _memory_init
+extern _malloc
+extern _free
+extern _memory_status
 
-extern process_init
-extern process_create
-extern schedule
+extern _process_init
+extern _process_create
+extern _schedule
 
-extern syscall_init
-extern sys_getpid
+extern _syscall_init
+extern _sys_getpid
+
+extern _driver_init
+extern _keyboard_available
+extern _keyboard_getch
+extern _desktop_draw
+extern _desktop_handle_input
 
 ; 内核入口点
 _start:
@@ -140,13 +146,13 @@ kernel_main:
     ; 初始化内存管理
     pushad
     mov eax, 0x1000000  ; 假设16MB内存
-    call memory_init
+    call _memory_init
     popad
     
     ; 测试内存分配
     pushad
     mov eax, 1024        ; 分配1KB内存
-    call malloc
+    call _malloc
     mov [test_ptr], eax  ; 保存分配的内存指针
     
     ; 打印内存分配信息
@@ -159,7 +165,7 @@ kernel_main:
     
     ; 初始化进程管理
     pushad
-    call process_init
+    call _process_init
     popad
     
     ; 创建测试进程
@@ -168,7 +174,7 @@ kernel_main:
     push 10             ; 优先级
     push eax            ; 进程入口点
     push test_process_name
-    call process_create
+    call _process_create
     add esp, 12         ; 清理栈
     popad
     
@@ -182,12 +188,12 @@ kernel_main:
     
     ; 初始化系统调用
     pushad
-    call syscall_init
+    call _syscall_init
     popad
     
     ; 测试系统调用
     pushad
-    call sys_getpid
+    call _sys_getpid
     ; 这里可以添加打印PID的代码
     popad
     
@@ -198,8 +204,38 @@ kernel_main:
     mov dl, 0x0f
     call print_string
     
-    ; 无限循环
-    jmp $  ; 无限循环
+    ; 初始化驱动程序
+    pushad
+    call _driver_init
+    popad
+    
+    ; 桌面环境主循环
+.desktop_loop:
+    ; 检查是否有键盘输入
+    call _keyboard_available
+    cmp eax, 0
+    je .no_input
+    
+    ; 获取键盘输入
+    call _keyboard_getch
+    cmp al, 0
+    je .no_input
+    
+    ; 处理输入
+    push eax
+    call _desktop_handle_input
+    add esp, 4
+    
+.no_input:
+    ; 绘制桌面
+    call _desktop_draw
+    
+    ; 短暂延迟
+    mov ecx, 100000
+.delay:
+    loop .delay
+    
+    jmp .desktop_loop
 
 ; 测试进程
  test_process:

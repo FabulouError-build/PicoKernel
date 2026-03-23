@@ -1,6 +1,5 @@
 /* 内核链接脚本 */
 
-OUTPUT_FORMAT("binary")
 ENTRY(_start)
 
 SECTIONS {
