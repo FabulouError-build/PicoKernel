@@ -10,8 +10,11 @@ global _start
 extern memory_init
 extern malloc
 extern free
-
 extern memory_status
+
+extern process_init
+extern process_create
+extern schedule
 
 ; 内核入口点
 _start:
@@ -151,6 +154,43 @@ kernel_main:
     call print_string
     popad
     
+    ; 初始化进程管理
+    pushad
+    call process_init
+    popad
+    
+    ; 创建测试进程
+    pushad
+    mov eax, test_process
+    push 10             ; 优先级
+    push eax            ; 进程入口点
+    push test_process_name
+    call process_create
+    add esp, 12         ; 清理栈
+    popad
+    
+    ; 打印进程创建信息
+    mov esi, msg_process_create
+    mov bx, 10
+    mov cx, 18
+    mov dl, 0x0f
+    call print_string
+    popad
+    
+    ; 无限循环
+    jmp $  ; 无限循环
+
+; 测试进程
+ test_process:
+    ; 打印进程运行信息
+    pushad
+    mov esi, msg_process_running
+    mov bx, 10
+    mov cx, 20
+    mov dl, 0x0f
+    call print_string
+    popad
+    
     ; 无限循环
     jmp $  ; 无限循环
 
@@ -159,5 +199,8 @@ msg_welcome db 'Welcome to PicoKernel!', 0
 msg_info1   db 'This is a simple operating system kernel.', 0
 msg_info2   db 'Kernel is running in 32-bit protected mode.', 0
 msg_mem_alloc db 'Memory allocation test completed.', 0
+msg_process_create db 'Process management initialized and test process created.', 0
+msg_process_running db 'Test process is running!', 0
+test_process_name db 'test_process', 0
 
 test_ptr dd 0  ; 测试内存指针

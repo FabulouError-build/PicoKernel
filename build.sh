@@ -41,6 +41,24 @@ if [ $? -ne 0 ]; then
 fi
 echo "Memory management compiled successfully."
 
+# 编译进程管理模块
+echo "Compiling process management..."
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/process.c -o build/process.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile process management."
+    exit 1
+fi
+echo "Process management compiled successfully."
+
+# 编译进程切换汇编
+echo "Compiling process switch asm..."
+nasm -f elf32 kernel/switch.asm -o build/switch.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile process switch asm."
+    exit 1
+fi
+echo "Process switch asm compiled successfully."
+
 # 编译内核
 echo "Compiling kernel..."
 nasm -f elf32 kernel/kernel.asm -o build/kernel.o
@@ -52,7 +70,7 @@ echo "Kernel compiled successfully."
 
 # 链接内核并生成二进制文件
 echo "Linking kernel..."
-gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o -o build/kernel.bin
+gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o build/process.o build/switch.o -o build/kernel.bin
 if [ $? -ne 0 ]; then
     echo "Error: Failed to link kernel."
     exit 1
