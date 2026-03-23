@@ -59,6 +59,15 @@ if [ $? -ne 0 ]; then
 fi
 echo "Process switch asm compiled successfully."
 
+# 编译系统调用模块
+echo "Compiling system calls..."
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/syscall.c -o build/syscall.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile system calls."
+    exit 1
+fi
+echo "System calls compiled successfully."
+
 # 编译内核
 echo "Compiling kernel..."
 nasm -f elf32 kernel/kernel.asm -o build/kernel.o
@@ -70,7 +79,7 @@ echo "Kernel compiled successfully."
 
 # 链接内核并生成二进制文件
 echo "Linking kernel..."
-gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o build/process.o build/switch.o -o build/kernel.bin
+gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o build/process.o build/switch.o build/syscall.o -o build/kernel.bin
 if [ $? -ne 0 ]; then
     echo "Error: Failed to link kernel."
     exit 1

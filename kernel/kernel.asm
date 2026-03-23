@@ -16,6 +16,9 @@ extern process_init
 extern process_create
 extern schedule
 
+extern syscall_init
+extern sys_getpid
+
 ; 内核入口点
 _start:
     ; 调用内核主函数
@@ -177,6 +180,24 @@ kernel_main:
     call print_string
     popad
     
+    ; 初始化系统调用
+    pushad
+    call syscall_init
+    popad
+    
+    ; 测试系统调用
+    pushad
+    call sys_getpid
+    ; 这里可以添加打印PID的代码
+    popad
+    
+    ; 打印系统调用初始化信息
+    mov esi, msg_syscall_init
+    mov bx, 10
+    mov cx, 20
+    mov dl, 0x0f
+    call print_string
+    
     ; 无限循环
     jmp $  ; 无限循环
 
@@ -201,6 +222,7 @@ msg_info2   db 'Kernel is running in 32-bit protected mode.', 0
 msg_mem_alloc db 'Memory allocation test completed.', 0
 msg_process_create db 'Process management initialized and test process created.', 0
 msg_process_running db 'Test process is running!', 0
+msg_syscall_init db 'System call initialized successfully.', 0
 test_process_name db 'test_process', 0
 
 test_ptr dd 0  ; 测试内存指针
