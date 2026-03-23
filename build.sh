@@ -34,7 +34,7 @@ echo "Bootloader compiled successfully."
 
 # 编译内存管理模块
 echo "Compiling memory management..."
-gcc -m32 -nostdlib -nostartfiles -ffreestanding -c kernel/memory.c -o build/memory.o
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/memory.c -o build/memory.o
 if [ $? -ne 0 ]; then
     echo "Error: Failed to compile memory management."
     exit 1
