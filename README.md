@@ -12,7 +12,7 @@
 
 ### 测试GitHub Actions构建
 
-再次测试GitHub Actions构建功能，验证计费问题是否已解决。
+测试新仓库的GitHub Actions构建功能，验证是否能够正常运行。
 
 ## 项目结构
 
