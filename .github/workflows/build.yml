@@ -16,12 +16,18 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm gcc-multilib qemu-system-i386
+        sudo apt-get install -y nasm gcc-multilib qemu-system-i386 genisoimage
 
     - name: Build PicoKernel
       run: |
         chmod +x build.sh
         bash -c "cd $(pwd) && ./build.sh"
+
+    - name: Create ISO image
+      run: |
+        mkdir -p iso
+        cp build/picokernel.img iso/
+        genisoimage -o build/picokernel.iso iso/
 
     - name: Test kernel
       run: |
