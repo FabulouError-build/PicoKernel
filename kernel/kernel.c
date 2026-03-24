@@ -39,13 +39,3 @@ void kernel_main() {
     }
 }
 
-// 内核入口点
-void _start() {
-    // 调用内核主函数
-    kernel_main();
-    
-    // 防止函数返回
-    while (1) {
-        // 什么都不做
-    }
-}

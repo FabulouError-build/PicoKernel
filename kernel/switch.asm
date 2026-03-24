@@ -19,13 +19,13 @@ process_switch_asm:
     
     ; 保存ESP
     mov eax, [current_process]
-    mov [eax + 8], esp  ; 保存ESP到进程控制块
+    mov [eax + 44], esp  ; 保存ESP到进程控制块 (pid:4 + name:32 + state:4 + priority:4)
     
     ; 加载下一个进程的上下文
     mov [current_process], ebx
     
     ; 加载ESP
-    mov esp, [ebx + 8]  ; 从进程控制块加载ESP
+    mov esp, [ebx + 44]  ; 从进程控制块加载ESP (pid:4 + name:32 + state:4 + priority:4)
     
     ; 恢复EBP
     pop ebp

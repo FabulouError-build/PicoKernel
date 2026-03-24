@@ -32,6 +32,51 @@ if [ $? -ne 0 ]; then
 fi
 echo "Bootloader compiled successfully."
 
+# 编译内存管理模块
+echo "Compiling memory management..."
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/memory.c -o build/memory.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile memory management."
+    exit 1
+fi
+echo "Memory management compiled successfully."
+
+# 编译进程管理模块
+echo "Compiling process management..."
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/process.c -o build/process.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile process management."
+    exit 1
+fi
+echo "Process management compiled successfully."
+
+# 编译进程切换汇编
+echo "Compiling process switch asm..."
+nasm -f elf32 kernel/switch.asm -o build/switch.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile process switch asm."
+    exit 1
+fi
+echo "Process switch asm compiled successfully."
+
+# 编译系统调用模块
+echo "Compiling system calls..."
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/syscall.c -o build/syscall.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile system calls."
+    exit 1
+fi
+echo "System calls compiled successfully."
+
+# 编译驱动程序模块
+echo "Compiling drivers..."
+gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel/driver.c -o build/driver.o
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile drivers."
+    exit 1
+fi
+echo "Drivers compiled successfully."
+
 # 编译内核
 echo "Compiling kernel..."
 nasm -f elf32 kernel/kernel.asm -o build/kernel.o
@@ -43,7 +88,7 @@ echo "Kernel compiled successfully."
 
 # 链接内核
 echo "Linking kernel..."
-gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o -o build/kernel.elf
+gcc -m32 -nostdlib -nostartfiles -T kernel/linker.ld build/kernel.o build/memory.o build/process.o build/switch.o build/syscall.o build/driver.o -o build/kernel.elf
 if [ $? -ne 0 ]; then
     echo "Error: Failed to link kernel."
     exit 1
