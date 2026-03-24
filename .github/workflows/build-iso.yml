@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage wget
 
     - name: Create directories
       run: |
@@ -30,16 +30,12 @@ jobs:
         mkdir -p build/desktop
         mkdir -p iso/server
         mkdir -p iso/desktop
+        mkdir -p kernel_build
 
     - name: Download Linux kernel
       run: |
-        if [ ! -f "linux/linux-6.10.7.tar.xz" ]; then
-          wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.7.tar.xz -O linux/linux-6.10.7.tar.xz
-        fi
-
-    - name: Extract Linux kernel
-      run: |
-        tar -xvf linux/linux-6.10.7.tar.xz -C kernel_build/
+        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.7.tar.xz -O /tmp/linux-6.10.7.tar.xz
+        tar -xvf /tmp/linux-6.10.7.tar.xz -C kernel_build/
 
     - name: Configure kernel for server
       run: |
@@ -113,6 +109,12 @@ jobs:
         # 创建ISO镜像
         genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/server.iso iso/server/
 
+    - name: Upload server ISO
+      uses: actions/upload-artifact@v4
+      with:
+        name: pico-kernel-server
+        path: build/server.iso
+
   build-desktop:
     name: Build Desktop Edition
     runs-on: ubuntu-latest
@@ -122,12 +124,18 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage wget
 
     - name: Create directories
       run: |
         mkdir -p build/desktop
         mkdir -p iso/desktop
+        mkdir -p kernel_build
+
+    - name: Download Linux kernel
+      run: |
+        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.7.tar.xz -O /tmp/linux-6.10.7.tar.xz
+        tar -xvf /tmp/linux-6.10.7.tar.xz -C kernel_build/
 
     - name: Configure kernel for desktop
       run: |
@@ -141,6 +149,11 @@ jobs:
         sed -i 's/# CONFIG_FB is not set/CONFIG_FB=y/' .config
         sed -i 's/# CONFIG_FB_VESA is not set/CONFIG_FB_VESA=y/' .config
         sed -i 's/# CONFIG_SOUND is not set/CONFIG_SOUND=y/' .config
+
+    - name: Build kernel
+      run: |
+        cd kernel_build/linux-6.10.7
+        make -j$(nproc)
 
     - name: Create desktop root filesystem
       run: |
@@ -201,10 +214,8 @@ jobs:
         # 创建ISO镜像
         genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/desktop.iso iso/desktop/
 
-    - name: Upload ISO images
+    - name: Upload desktop ISO
       uses: actions/upload-artifact@v4
       with:
-        name: pico-kernel-iso
-        path: |
-          build/server.iso
-          build/desktop.iso
+        name: pico-kernel-desktop
+        path: build/desktop.iso
