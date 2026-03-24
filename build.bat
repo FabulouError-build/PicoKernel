@@ -47,13 +47,23 @@ echo Kernel compiled successfully.
 
 REM 链接内核
 echo Linking kernel...
-gcc -m32 -nostdlib -nostartfiles -T kernel\linker.ld build\kernel.o -o build\kernel.bin
+gcc -m32 -nostdlib -nostartfiles -T kernel\linker.ld build\kernel.o -o build\kernel.elf
 if %errorlevel% neq 0 (
     echo Error: Failed to link kernel.
     pause
     exit /b 1
 )
 echo Kernel linked successfully.
+
+REM 转换为二进制格式
+echo Converting to binary format...
+objcopy -O binary build\kernel.elf build\kernel.bin
+if %errorlevel% neq 0 (
+    echo Error: Failed to convert kernel to binary format.
+    pause
+    exit /b 1
+)
+echo Kernel converted to binary format successfully.
 
 REM 创建磁盘镜像
 echo Creating disk image...
