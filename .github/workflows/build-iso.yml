@@ -1,0 +1,210 @@
+name: Build Linux ISO Images
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-server:
+    name: Build Server Edition
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage
+
+    - name: Create directories
+      run: |
+        mkdir -p build/server
+        mkdir -p build/desktop
+        mkdir -p iso/server
+        mkdir -p iso/desktop
+
+    - name: Download Linux kernel
+      run: |
+        if [ ! -f "linux/linux-6.10.7.tar.xz" ]; then
+          wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.7.tar.xz -O linux/linux-6.10.7.tar.xz
+        fi
+
+    - name: Extract Linux kernel
+      run: |
+        tar -xvf linux/linux-6.10.7.tar.xz -C kernel_build/
+
+    - name: Configure kernel for server
+      run: |
+        cd kernel_build/linux-6.10.7
+        make defconfig
+        # 为服务器版启用必要的功能
+        sed -i 's/# CONFIG_NETWORK_FILESYSTEMS is not set/CONFIG_NETWORK_FILESYSTEMS=y/' .config
+        sed -i 's/# CONFIG_NFS_FS is not set/CONFIG_NFS_FS=y/' .config
+        sed -i 's/# CONFIG_SMB_FS is not set/CONFIG_SMB_FS=y/' .config
+        sed -i 's/# CONFIG_USB_STORAGE is not set/CONFIG_USB_STORAGE=y/' .config
+
+    - name: Build kernel
+      run: |
+        cd kernel_build/linux-6.10.7
+        make -j$(nproc)
+
+    - name: Create server root filesystem
+      run: |
+        # 使用debootstrap创建基本根文件系统
+        sudo debootstrap --arch=i386 bullseye build/server/chroot http://deb.debian.org/debian/
+        
+        # 挂载必要的文件系统
+        sudo mount -t proc proc build/server/chroot/proc/
+        sudo mount -t sysfs sys build/server/chroot/sys/
+        sudo mount -o bind /dev build/server/chroot/dev/
+        
+        # 安装必要的软件包
+        sudo chroot build/server/chroot /bin/bash -c 'apt-get update && apt-get install -y apt-utils dialog'
+        sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y linux-image-686 linux-headers-686'
+        sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y openssh-server net-tools iputils-ping curl wget'
+        sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y vim nano git'
+        
+        # 安装yum包管理器
+        sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y yum'
+        
+        # 配置网络
+        sudo chroot build/server/chroot /bin/bash -c 'echo "auto eth0" > /etc/network/interfaces.d/eth0'
+        sudo chroot build/server/chroot /bin/bash -c 'echo "iface eth0 inet dhcp" >> /etc/network/interfaces.d/eth0'
+        
+        # 创建用户
+        sudo chroot build/server/chroot /bin/bash -c 'useradd -m -s /bin/bash user'
+        sudo chroot build/server/chroot /bin/bash -c 'echo "user:password" | chpasswd'
+        sudo chroot build/server/chroot /bin/bash -c 'usermod -aG sudo user'
+        
+        # 清理
+        sudo chroot build/server/chroot /bin/bash -c 'apt-get clean'
+        
+        # 卸载文件系统
+        sudo umount build/server/chroot/proc/
+        sudo umount build/server/chroot/sys/
+        sudo umount build/server/chroot/dev/
+
+    - name: Create server ISO
+      run: |
+        # 复制内核和initrd
+        cp kernel_build/linux-6.10.7/arch/x86/boot/bzImage iso/server/vmlinuz
+        cp build/server/chroot/boot/initrd.img-* iso/server/initrd.img
+        
+        # 创建ISO目录结构
+        mkdir -p iso/server/boot/grub
+        
+        # 创建GRUB配置文件
+        echo 'set timeout=5' > iso/server/boot/grub/grub.cfg
+        echo 'set default=0' >> iso/server/boot/grub/grub.cfg
+        echo '' >> iso/server/boot/grub/grub.cfg
+        echo 'menuentry "PicoKernel Server Edition" {' >> iso/server/boot/grub/grub.cfg
+        echo '  linux /vmlinuz root=/dev/sda1 ro quiet' >> iso/server/boot/grub/grub.cfg
+        echo '  initrd /initrd.img' >> iso/server/boot/grub/grub.cfg
+        echo '}' >> iso/server/boot/grub/grub.cfg
+        
+        # 创建ISO镜像
+        genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/server.iso iso/server/
+
+  build-desktop:
+    name: Build Desktop Edition
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage
+
+    - name: Create directories
+      run: |
+        mkdir -p build/desktop
+        mkdir -p iso/desktop
+
+    - name: Configure kernel for desktop
+      run: |
+        cd kernel_build/linux-6.10.7
+        make defconfig
+        # 为桌面版启用必要的功能
+        sed -i 's/# CONFIG_NETWORK_FILESYSTEMS is not set/CONFIG_NETWORK_FILESYSTEMS=y/' .config
+        sed -i 's/# CONFIG_NFS_FS is not set/CONFIG_NFS_FS=y/' .config
+        sed -i 's/# CONFIG_SMB_FS is not set/CONFIG_SMB_FS=y/' .config
+        sed -i 's/# CONFIG_USB_STORAGE is not set/CONFIG_USB_STORAGE=y/' .config
+        sed -i 's/# CONFIG_FB is not set/CONFIG_FB=y/' .config
+        sed -i 's/# CONFIG_FB_VESA is not set/CONFIG_FB_VESA=y/' .config
+        sed -i 's/# CONFIG_SOUND is not set/CONFIG_SOUND=y/' .config
+
+    - name: Create desktop root filesystem
+      run: |
+        # 使用debootstrap创建基本根文件系统
+        sudo debootstrap --arch=i386 bullseye build/desktop/chroot http://deb.debian.org/debian/
+        
+        # 挂载必要的文件系统
+        sudo mount -t proc proc build/desktop/chroot/proc/
+        sudo mount -t sysfs sys build/desktop/chroot/sys/
+        sudo mount -o bind /dev build/desktop/chroot/dev/
+        
+        # 安装必要的软件包
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get update && apt-get install -y apt-utils dialog'
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y linux-image-686 linux-headers-686'
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y xorg xserver-xorg-core xserver-xorg-video-vesa'
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y lxde-core lxterminal'
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y openssh-server net-tools iputils-ping curl wget'
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y vim nano git'
+        
+        # 安装yum包管理器
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y yum'
+        
+        # 配置网络
+        sudo chroot build/desktop/chroot /bin/bash -c 'echo "auto eth0" > /etc/network/interfaces.d/eth0'
+        sudo chroot build/desktop/chroot /bin/bash -c 'echo "iface eth0 inet dhcp" >> /etc/network/interfaces.d/eth0'
+        
+        # 创建用户
+        sudo chroot build/desktop/chroot /bin/bash -c 'useradd -m -s /bin/bash user'
+        sudo chroot build/desktop/chroot /bin/bash -c 'echo "user:password" | chpasswd'
+        sudo chroot build/desktop/chroot /bin/bash -c 'usermod -aG sudo user'
+        
+        # 清理
+        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get clean'
+        
+        # 卸载文件系统
+        sudo umount build/desktop/chroot/proc/
+        sudo umount build/desktop/chroot/sys/
+        sudo umount build/desktop/chroot/dev/
+
+    - name: Create desktop ISO
+      run: |
+        # 复制内核和initrd
+        cp kernel_build/linux-6.10.7/arch/x86/boot/bzImage iso/desktop/vmlinuz
+        cp build/desktop/chroot/boot/initrd.img-* iso/desktop/initrd.img
+        
+        # 创建ISO目录结构
+        mkdir -p iso/desktop/boot/grub
+        
+        # 创建GRUB配置文件
+        echo 'set timeout=5' > iso/desktop/boot/grub/grub.cfg
+        echo 'set default=0' >> iso/desktop/boot/grub/grub.cfg
+        echo '' >> iso/desktop/boot/grub/grub.cfg
+        echo 'menuentry "PicoKernel Desktop Edition" {' >> iso/desktop/boot/grub/grub.cfg
+        echo '  linux /vmlinuz root=/dev/sda1 ro quiet' >> iso/desktop/boot/grub/grub.cfg
+        echo '  initrd /initrd.img' >> iso/desktop/boot/grub/grub.cfg
+        echo '}' >> iso/desktop/boot/grub/grub.cfg
+        
+        # 创建ISO镜像
+        genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/desktop.iso iso/desktop/
+
+    - name: Upload ISO images
+      uses: actions/upload-artifact@v4
+      with:
+        name: pico-kernel-iso
+        path: |
+          build/server.iso
+          build/desktop.iso
