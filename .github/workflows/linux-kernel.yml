@@ -18,6 +18,11 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev
 
+    - name: Create directories
+      run: |
+        mkdir -p linux
+        mkdir -p kernel_build
+
     - name: Download Linux kernel
       run: |
         if [ ! -f "linux/linux-6.10.7.tar.xz" ]; then
