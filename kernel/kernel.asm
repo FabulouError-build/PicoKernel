@@ -27,6 +27,9 @@ extern desktop_handle_input
 
 ; 内核入口点
 _start:
+    ; 设置栈指针
+    mov esp, 0x90000  ; 栈指针指向 9MB 处
+    
     ; 调用内核主函数
     call kernel_main
     
