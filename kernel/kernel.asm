@@ -171,9 +171,9 @@ kernel_main:
     ; 创建测试进程
     pushad
     mov eax, test_process
-    push 10             ; 优先级
+    push test_process_name  ; 进程名称
     push eax            ; 进程入口点
-    push test_process_name
+    push 10             ; 优先级
     call process_create
     add esp, 12         ; 清理栈
     popad
