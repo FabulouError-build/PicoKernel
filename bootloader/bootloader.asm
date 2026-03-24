@@ -102,7 +102,7 @@ protected_mode:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov esp, 0x7c00  ; 栈指针
+    mov esp, 0x90000  ; 栈指针，与内核中的设置保持一致
 
     ; 跳转到内核
     jmp 0x10000     ; 内核加载地址
