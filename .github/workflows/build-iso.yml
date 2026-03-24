@@ -12,45 +12,87 @@ on:
         required: true
         default: '1.0.0'
 
+env:
+  KERNEL_VERSION: 6.10.7
+  CACHE_KEY: kernel-6.10.7
+
 jobs:
-  build-server:
-    name: Build Server Edition
+  build-kernel:
+    name: Build Linux Kernel (Cached)
     runs-on: ubuntu-latest
+    outputs:
+      kernel-cache-hit: ${{ steps.cache-kernel.outputs.cache-hit }}
     steps:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage wget
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev wget
 
-    - name: Create directories
+    - name: Cache Linux kernel
+      id: cache-kernel
+      uses: actions/cache@v4
+      with:
+        path: kernel_build
+        key: ${{ env.CACHE_KEY }}
+
+    - name: Download and extract Linux kernel
+      if: steps.cache-kernel.outputs.cache-hit != 'true'
       run: |
-        mkdir -p build/server
-        mkdir -p build/desktop
-        mkdir -p iso/server
-        mkdir -p iso/desktop
         mkdir -p kernel_build
+        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${{ env.KERNEL_VERSION }}.tar.xz -O /tmp/linux-${{ env.KERNEL_VERSION }}.tar.xz
+        tar -xvf /tmp/linux-${{ env.KERNEL_VERSION }}.tar.xz -C kernel_build/
 
-    - name: Download Linux kernel
+    - name: Configure kernel
+      if: steps.cache-kernel.outputs.cache-hit != 'true'
       run: |
-        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.7.tar.xz -O /tmp/linux-6.10.7.tar.xz
-        tar -xvf /tmp/linux-6.10.7.tar.xz -C kernel_build/
-
-    - name: Configure kernel for server
-      run: |
-        cd kernel_build/linux-6.10.7
+        cd kernel_build/linux-${{ env.KERNEL_VERSION }}
         make defconfig
-        # 为服务器版启用必要的功能
+        # 启用必要的功能
         sed -i 's/# CONFIG_NETWORK_FILESYSTEMS is not set/CONFIG_NETWORK_FILESYSTEMS=y/' .config
         sed -i 's/# CONFIG_NFS_FS is not set/CONFIG_NFS_FS=y/' .config
         sed -i 's/# CONFIG_SMB_FS is not set/CONFIG_SMB_FS=y/' .config
         sed -i 's/# CONFIG_USB_STORAGE is not set/CONFIG_USB_STORAGE=y/' .config
+        sed -i 's/# CONFIG_FB is not set/CONFIG_FB=y/' .config
+        sed -i 's/# CONFIG_FB_VESA is not set/CONFIG_FB_VESA=y/' .config
+        sed -i 's/# CONFIG_SOUND is not set/CONFIG_SOUND=y/' .config
 
     - name: Build kernel
+      if: steps.cache-kernel.outputs.cache-hit != 'true'
       run: |
-        cd kernel_build/linux-6.10.7
+        cd kernel_build/linux-${{ env.KERNEL_VERSION }}
         make -j$(nproc)
+
+    - name: Upload kernel artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-build
+        path: kernel_build/
+        retention-days: 1
+
+  build-server:
+    name: Build Server Edition
+    runs-on: ubuntu-latest
+    needs: build-kernel
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y debootstrap qemu-utils genisoimage
+
+    - name: Create directories
+      run: |
+        mkdir -p build/server
+        mkdir -p iso/server
+
+    - name: Download kernel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: kernel-build
+        path: kernel_build/
 
     - name: Create server root filesystem
       run: |
@@ -91,7 +133,7 @@ jobs:
     - name: Create server ISO
       run: |
         # 复制内核和initrd
-        cp kernel_build/linux-6.10.7/arch/x86/boot/bzImage iso/server/vmlinuz
+        cp kernel_build/linux-${{ env.KERNEL_VERSION }}/arch/x86/boot/bzImage iso/server/vmlinuz
         cp build/server/chroot/boot/initrd.img-* iso/server/initrd.img
         
         # 创建ISO目录结构
@@ -118,42 +160,25 @@ jobs:
   build-desktop:
     name: Build Desktop Edition
     runs-on: ubuntu-latest
+    needs: build-kernel
     steps:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev debootstrap qemu-utils genisoimage wget
+        sudo apt-get install -y debootstrap qemu-utils genisoimage
 
     - name: Create directories
       run: |
         mkdir -p build/desktop
         mkdir -p iso/desktop
-        mkdir -p kernel_build
 
-    - name: Download Linux kernel
-      run: |
-        wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.7.tar.xz -O /tmp/linux-6.10.7.tar.xz
-        tar -xvf /tmp/linux-6.10.7.tar.xz -C kernel_build/
-
-    - name: Configure kernel for desktop
-      run: |
-        cd kernel_build/linux-6.10.7
-        make defconfig
-        # 为桌面版启用必要的功能
-        sed -i 's/# CONFIG_NETWORK_FILESYSTEMS is not set/CONFIG_NETWORK_FILESYSTEMS=y/' .config
-        sed -i 's/# CONFIG_NFS_FS is not set/CONFIG_NFS_FS=y/' .config
-        sed -i 's/# CONFIG_SMB_FS is not set/CONFIG_SMB_FS=y/' .config
-        sed -i 's/# CONFIG_USB_STORAGE is not set/CONFIG_USB_STORAGE=y/' .config
-        sed -i 's/# CONFIG_FB is not set/CONFIG_FB=y/' .config
-        sed -i 's/# CONFIG_FB_VESA is not set/CONFIG_FB_VESA=y/' .config
-        sed -i 's/# CONFIG_SOUND is not set/CONFIG_SOUND=y/' .config
-
-    - name: Build kernel
-      run: |
-        cd kernel_build/linux-6.10.7
-        make -j$(nproc)
+    - name: Download kernel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: kernel-build
+        path: kernel_build/
 
     - name: Create desktop root filesystem
       run: |
@@ -196,7 +221,7 @@ jobs:
     - name: Create desktop ISO
       run: |
         # 复制内核和initrd
-        cp kernel_build/linux-6.10.7/arch/x86/boot/bzImage iso/desktop/vmlinuz
+        cp kernel_build/linux-${{ env.KERNEL_VERSION }}/arch/x86/boot/bzImage iso/desktop/vmlinuz
         cp build/desktop/chroot/boot/initrd.img-* iso/desktop/initrd.img
         
         # 创建ISO目录结构
