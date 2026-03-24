@@ -184,7 +184,6 @@ kernel_main:
     mov cx, 18
     mov dl, 0x0f
     call print_string
-    popad
     
     ; 初始化系统调用
     pushad
