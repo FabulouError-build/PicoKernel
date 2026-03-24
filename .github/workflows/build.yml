@@ -42,7 +42,7 @@ jobs:
         echo '}' >> iso/boot/grub/grub.cfg
         
         # 安装 GRUB 到 ISO 镜像
-        sudo apt-get install -y grub2-common xorriso
+        sudo apt-get install -y grub2-common xorriso mtools
         grub-mkrescue -o build/picokernel.iso iso/
 
     - name: Test kernel
