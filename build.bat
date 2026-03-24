@@ -35,56 +35,6 @@ if %errorlevel% neq 0 (
 )
 echo Bootloader compiled successfully.
 
-REM 编译内存管理模块
-echo Compiling memory management...
-gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel\memory.c -o build\memory.o
-if %errorlevel% neq 0 (
-    echo Error: Failed to compile memory management.
-    pause
-    exit /b 1
-)
-echo Memory management compiled successfully.
-
-REM 编译进程管理模块
-echo Compiling process management...
-gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel\process.c -o build\process.o
-if %errorlevel% neq 0 (
-    echo Error: Failed to compile process management.
-    pause
-    exit /b 1
-)
-echo Process management compiled successfully.
-
-REM 编译进程切换汇编
-echo Compiling process switch asm...
-nasm -f elf32 kernel\switch.asm -o build\switch.o
-if %errorlevel% neq 0 (
-    echo Error: Failed to compile process switch asm.
-    pause
-    exit /b 1
-)
-echo Process switch asm compiled successfully.
-
-REM 编译系统调用模块
-echo Compiling system calls...
-gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel\syscall.c -o build\syscall.o
-if %errorlevel% neq 0 (
-    echo Error: Failed to compile system calls.
-    pause
-    exit /b 1
-)
-echo System calls compiled successfully.
-
-REM 编译驱动程序模块
-echo Compiling drivers...
-gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-pic -c kernel\driver.c -o build\driver.o
-if %errorlevel% neq 0 (
-    echo Error: Failed to compile drivers.
-    pause
-    exit /b 1
-)
-echo Drivers compiled successfully.
-
 REM 编译内核
 echo Compiling kernel...
 nasm -f elf32 kernel\kernel.asm -o build\kernel.o
@@ -97,7 +47,7 @@ echo Kernel compiled successfully.
 
 REM 链接内核
 echo Linking kernel...
-gcc -m32 -nostdlib -nostartfiles -T kernel\linker.ld build\kernel.o build\memory.o build\process.o build\switch.o build\syscall.o build\driver.o -o build\kernel.bin
+gcc -m32 -nostdlib -nostartfiles -T kernel\linker.ld build\kernel.o -o build\kernel.bin
 if %errorlevel% neq 0 (
     echo Error: Failed to link kernel.
     pause
