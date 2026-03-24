@@ -23,11 +23,27 @@ jobs:
         chmod +x build.sh
         bash -c "cd $(pwd) && ./build.sh"
 
-    - name: Create ISO image
+    - name: Create bootable ISO image
       run: |
-        mkdir -p iso
+        # 创建 ISO 目录结构
+        mkdir -p iso/boot/grub
+        
+        # 复制软盘镜像到 ISO 目录
         cp build/picokernel.img iso/
-        genisoimage -o build/picokernel.iso iso/
+        
+        # 创建 GRUB 配置文件
+        echo 'set timeout=0' > iso/boot/grub/grub.cfg
+        echo 'set default=0' >> iso/boot/grub/grub.cfg
+        echo '' >> iso/boot/grub/grub.cfg
+        echo 'menuentry "PicoKernel" {' >> iso/boot/grub/grub.cfg
+        echo '  loopback loop /picokernel.img' >> iso/boot/grub/grub.cfg
+        echo '  chainloader (loop)+1' >> iso/boot/grub/grub.cfg
+        echo '  boot' >> iso/boot/grub/grub.cfg
+        echo '}' >> iso/boot/grub/grub.cfg
+        
+        # 安装 GRUB 到 ISO 镜像
+        sudo apt-get install -y grub2-common xorriso
+        grub-mkrescue -o build/picokernel.iso iso/
 
     - name: Test kernel
       run: |
