@@ -4,13 +4,13 @@
 #include "memory.h"
 
 // 外部汇编函数
-extern void _process_switch_asm(process_t *next);
+extern void process_switch_asm(process_t *next);
 
 // 进程链表头
 static process_t *process_list = NULL;
 
 // 当前进程
-process_t *_current_process = NULL;
+process_t *current_process = NULL;
 
 // 下一个进程ID
 static uint32_t next_pid = 1;
@@ -21,8 +21,8 @@ void process_init(void) {
     process_create("idle", NULL, 0);
     
     // 设置当前进程为空闲任务
-    _current_process = process_list;
-    _current_process->state = PROCESS_RUNNING;
+    current_process = process_list;
+    current_process->state = PROCESS_RUNNING;
 }
 
 // 创建新进程
@@ -96,20 +96,20 @@ process_t *process_create(const char *name, void (*entry)(void), uint32_t priori
 
 // 切换进程
 void process_switch(process_t *next) {
-    if (!next || next == _current_process) {
+    if (!next || next == current_process) {
         return;
     }
     
     // 更新当前进程状态
-    if (_current_process->state == PROCESS_RUNNING) {
-        _current_process->state = PROCESS_READY;
+    if (current_process->state == PROCESS_RUNNING) {
+        current_process->state = PROCESS_READY;
     }
     
     // 更新下一个进程状态
     next->state = PROCESS_RUNNING;
     
     // 调用汇编实现的进程切换
-    _process_switch_asm(next);
+    process_switch_asm(next);
 }
 
 // 调度进程
@@ -139,35 +139,35 @@ void schedule(void) {
 
 // 获取当前进程
 process_t *get_current_process(void) {
-    return _current_process;
+    return current_process;
 }
 
 // 终止进程
 void process_exit(void) {
-    if (!_current_process) {
+    if (!current_process) {
         return;
     }
     
     // 标记进程为终止状态
-    _current_process->state = PROCESS_TERMINATED;
+    current_process->state = PROCESS_TERMINATED;
     
     // 释放进程资源
     // 这里需要释放进程栈等资源
     
     // 从进程链表中移除
-    if (_current_process->next == _current_process) {
+    if (current_process->next == current_process) {
         // 只有一个进程
         process_list = NULL;
     } else {
-        _current_process->prev->next = _current_process->next;
-        _current_process->next->prev = _current_process->prev;
-        if (process_list == _current_process) {
-            process_list = _current_process->next;
+        current_process->prev->next = current_process->next;
+        current_process->next->prev = current_process->prev;
+        if (process_list == current_process) {
+            process_list = current_process->next;
         }
     }
     
     // 保存要删除的进程
-    process_t *to_delete = _current_process;
+    process_t *to_delete = current_process;
     
     // 调度到下一个进程
     schedule();
@@ -178,11 +178,11 @@ void process_exit(void) {
 
 // 阻塞进程
 void process_block(void) {
-    if (!_current_process) {
+    if (!current_process) {
         return;
     }
     
-    _current_process->state = PROCESS_BLOCKED;
+    current_process->state = PROCESS_BLOCKED;
     schedule();
 }
 
