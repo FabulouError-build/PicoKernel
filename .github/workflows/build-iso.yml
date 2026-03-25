@@ -81,7 +81,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y debootstrap qemu-utils genisoimage grub2-common grub-pc-bin
+        sudo apt-get install -y debootstrap qemu-utils xorriso grub2-common grub-pc-bin
 
     - name: Create directories
       run: |
@@ -106,7 +106,6 @@ jobs:
         
         # 安装必要的软件包
         sudo chroot build/server/chroot /bin/bash -c 'apt-get update && apt-get install -y apt-utils dialog'
-        sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y linux-image-686 linux-headers-686'
         sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y openssh-server net-tools iputils-ping curl wget'
         sudo chroot build/server/chroot /bin/bash -c 'apt-get install -y vim nano git'
         
@@ -132,9 +131,8 @@ jobs:
 
     - name: Create server ISO
       run: |
-        # 复制内核和initrd
+        # 复制内核
         cp kernel_build/linux-${{ env.KERNEL_VERSION }}/arch/x86/boot/bzImage iso/server/vmlinuz
-        cp build/server/chroot/boot/initrd.img-* iso/server/initrd.img
         
         # 创建ISO目录结构
         mkdir -p iso/server/boot/grub
@@ -150,11 +148,10 @@ jobs:
         echo '' >> iso/server/boot/grub/grub.cfg
         echo 'menuentry "PicoKernel Server Edition" {' >> iso/server/boot/grub/grub.cfg
         echo '  linux /vmlinuz root=/dev/sda1 ro quiet' >> iso/server/boot/grub/grub.cfg
-        echo '  initrd /initrd.img' >> iso/server/boot/grub/grub.cfg
         echo '}' >> iso/server/boot/grub/grub.cfg
         
         # 创建ISO镜像
-        genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/server.iso iso/server/
+        xorriso -as mkisofs -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/server.iso iso/server/
 
     - name: Upload server ISO
       uses: actions/upload-artifact@v4
@@ -172,7 +169,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y debootstrap qemu-utils genisoimage grub2-common grub-pc-bin
+        sudo apt-get install -y debootstrap qemu-utils xorriso grub2-common grub-pc-bin
 
     - name: Create directories
       run: |
@@ -197,7 +194,6 @@ jobs:
         
         # 安装必要的软件包
         sudo chroot build/desktop/chroot /bin/bash -c 'apt-get update && apt-get install -y apt-utils dialog'
-        sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y linux-image-686 linux-headers-686'
         sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y xorg xserver-xorg-core xserver-xorg-video-vesa'
         sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y lxde-core lxterminal'
         sudo chroot build/desktop/chroot /bin/bash -c 'apt-get install -y openssh-server net-tools iputils-ping curl wget'
@@ -225,9 +221,8 @@ jobs:
 
     - name: Create desktop ISO
       run: |
-        # 复制内核和initrd
+        # 复制内核
         cp kernel_build/linux-${{ env.KERNEL_VERSION }}/arch/x86/boot/bzImage iso/desktop/vmlinuz
-        cp build/desktop/chroot/boot/initrd.img-* iso/desktop/initrd.img
         
         # 创建ISO目录结构
         mkdir -p iso/desktop/boot/grub
@@ -243,11 +238,10 @@ jobs:
         echo '' >> iso/desktop/boot/grub/grub.cfg
         echo 'menuentry "PicoKernel Desktop Edition" {' >> iso/desktop/boot/grub/grub.cfg
         echo '  linux /vmlinuz root=/dev/sda1 ro quiet' >> iso/desktop/boot/grub/grub.cfg
-        echo '  initrd /initrd.img' >> iso/desktop/boot/grub/grub.cfg
         echo '}' >> iso/desktop/boot/grub/grub.cfg
         
         # 创建ISO镜像
-        genisoimage -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/desktop.iso iso/desktop/
+        xorriso -as mkisofs -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o build/desktop.iso iso/desktop/
 
     - name: Upload desktop ISO
       uses: actions/upload-artifact@v4
