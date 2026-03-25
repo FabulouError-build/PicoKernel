@@ -1,22 +1,27 @@
-# 构建输出
+# Build directories
 build/
+iso/
+kernel_build/
+linux/
 
-# 临时文件
+# Compiled files
+*.o
+*.elf
+*.bin
+*.img
+*.iso
+
+# Temporary files
 *.tmp
 *.temp
 
-# 编辑器文件
+# Log files
+*.log
+
+# IDE files
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# 操作系统文件
+# OS files
 Thumbs.db
 .DS_Store
-
-# 编译产物
-*.bin
-*.elf
-*.o
-*.img
