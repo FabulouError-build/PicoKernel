@@ -81,7 +81,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y debootstrap qemu-utils genisoimage grub2-common
+        sudo apt-get install -y debootstrap qemu-utils genisoimage grub2-common grub-pc-bin
 
     - name: Create directories
       run: |
@@ -139,8 +139,10 @@ jobs:
         # 创建ISO目录结构
         mkdir -p iso/server/boot/grub
         
-        # 复制GRUB stage2_eltorito文件
-        cp /usr/lib/grub/i386-pc/stage2_eltorito iso/server/boot/grub/
+        # 查找并复制GRUB stage2_eltorito文件
+        find /usr -name stage2_eltorito -type f
+        cp $(find /usr -name stage2_eltorito -type f | head -1) iso/server/boot/grub/
+        ls -la iso/server/boot/grub/
         
         # 创建GRUB配置文件
         echo 'set timeout=5' > iso/server/boot/grub/grub.cfg
@@ -170,7 +172,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y debootstrap qemu-utils genisoimage grub2-common
+        sudo apt-get install -y debootstrap qemu-utils genisoimage grub2-common grub-pc-bin
 
     - name: Create directories
       run: |
@@ -230,8 +232,10 @@ jobs:
         # 创建ISO目录结构
         mkdir -p iso/desktop/boot/grub
         
-        # 复制GRUB stage2_eltorito文件
-        cp /usr/lib/grub/i386-pc/stage2_eltorito iso/desktop/boot/grub/
+        # 查找并复制GRUB stage2_eltorito文件
+        find /usr -name stage2_eltorito -type f
+        cp $(find /usr -name stage2_eltorito -type f | head -1) iso/desktop/boot/grub/
+        ls -la iso/desktop/boot/grub/
         
         # 创建GRUB配置文件
         echo 'set timeout=5' > iso/desktop/boot/grub/grub.cfg
