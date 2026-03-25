@@ -43,8 +43,12 @@ jobs:
         cd kernel_build/linux-6.10.7
         make -j$(nproc)
 
+    - name: Rename kernel image with suffix
+      run: |
+        cp kernel_build/linux-6.10.7/arch/x86/boot/bzImage kernel_build/linux-6.10.7/arch/x86/boot/bzImage.bin
+
     - name: Upload kernel image
       uses: actions/upload-artifact@v4
       with:
         name: linux-kernel
-        path: kernel_build/linux-6.10.7/arch/x86/boot/bzImage
+        path: kernel_build/linux-6.10.7/arch/x86/boot/bzImage.bin
